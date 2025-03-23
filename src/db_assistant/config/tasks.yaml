@@ -1,0 +1,48 @@
+research_task:
+  description: >
+    Conduct a thorough research about {topic}
+    Make sure you find any interesting and relevant information given
+    the current year is {current_year}.
+  expected_output: >
+    A list with 10 bullet points of the most relevant information about {topic}
+  agent: researcher
+
+reporting_task:
+  description: >
+    Review the context you got and expand each topic into a full section for a report.
+    Make sure the report is detailed and contains any and all relevant information.
+  expected_output: >
+    A fully fledged report with the main topics, each with a full section of information.
+    Formatted as markdown without '```'
+  agent: reporting_analyst
+
+# 核心任务定义
+sql_query:
+  description: >
+    根据用户提供的自然语言描述生成标准SQL查询语句。
+    自动处理以下逻辑：
+    1. 识别查询目标主体 (users/orders/products 等), 并让用户确认后执行。
+    2. 解析过滤条件中的比较运算符和逻辑关系
+    3. 推断排序需求和返回字段
+    4. 对模糊表述进行智能引导
+  expected_output: >
+    查询结果显示及标准SQL查询语句 或 澄清需求的引导问题
+  agent: sql_expert
+  input_template: |
+    请描述您的数据需求：
+    (示例：需要最近三个月北京地区的电子产品订单，按金额排序前10条)
+    
+    当前用户输入：{user_query}
+  validation_rules:
+    - condition: "len(user_query) < 10"
+      message: 您的描述过于简略，请具体说明需要查询的数据特征
+    - condition: "not any(keyword in user_query for keyword in ['查询', '找', '统计'])"
+      message: 请明确使用查询动词 (例如：查找/统计/列出...)
+    - condition: "required_fields_not_specified"
+      message: 您需要指定返回字段吗？默认返回全部字段
+  params:
+    default_table: "orders"  # 根据业务场景设置默认表
+    fallback_questions:  # 智能引导问题库
+      - 您需要限定时间范围吗？
+      - 需要按哪个字段排序？
+      - 需要排除某些特定条件吗？
