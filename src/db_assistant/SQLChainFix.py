@@ -1,19 +1,11 @@
 import re
 
 from langchain_experimental.sql import SQLDatabaseChain
-import warnings
 from typing import Any, Dict, List, Optional
 
-from langchain.chains.base import Chain
-from langchain.chains.llm import LLMChain
-from langchain.chains.sql_database.prompt import DECIDER_PROMPT, PROMPT, SQL_PROMPTS
-from langchain.schema import BasePromptTemplate
 from langchain_community.tools.sql_database.prompt import QUERY_CHECKER
-from langchain_community.utilities.sql_database import SQLDatabase
 from langchain_core.callbacks.manager import CallbackManagerForChainRun
-from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts.prompt import PromptTemplate
-from pydantic import ConfigDict, Field, model_validator
 
 
 
@@ -60,9 +52,10 @@ class SQLChain(SQLDatabaseChain):
             query_checker_prompt = self.query_checker_prompt or PromptTemplate(
                 template=QUERY_CHECKER, input_variables=["query", "dialect"]
             )
-            query_checker_chain = LLMChain(
-                llm=self.llm_chain.llm, prompt=query_checker_prompt
-            )
+            # query_checker_chain = LLMChain(
+            #     llm=self.llm_chain.llm, prompt=query_checker_prompt
+            # )
+            query_checker_chain = query_checker_prompt | self.llm_chain.llm
             query_checker_inputs = {
                 "query": sql_cmd,
                 "dialect": self.database.dialect,
@@ -118,7 +111,6 @@ class SQLChain(SQLDatabaseChain):
             chain_result: Dict[str, Any] = {self.output_key: final_result}
             if self.return_intermediate_steps:
                 chain_result[INTERMEDIATE_STEPS_KEY] = intermediate_steps
-            print('intermediate_steps:', intermediate_steps)
             return chain_result
         except Exception as exc:
             # Append intermediate steps to exception, to aid in logging and later
