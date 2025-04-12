@@ -9,14 +9,30 @@ from langchain_openai import ChatOpenAI
 from langchain_community.utilities.sql_database import SQLDatabase
 # 导入SQLDatabaseChain，用于创建一个结合了语言模型和数据库的处理链
 from SQLChainFix import SQLChain
-from langchain_siliconflow import SiliconFlow
+from langchain_siliconflow import ChatSiliconFlow
 from langchain.prompts import PromptTemplate
+from langchain_openai import OpenAIEmbeddings
+from langchain_core.vectorstores import InMemoryVectorStore
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,  # chunk size (characters)
+    chunk_overlap=200,  # chunk overlap (characters)
+    add_start_index=True,  # track index in original document
+)
+all_splits = text_splitter.split_documents(docs)
+
+print(f"Split blog post into {len(all_splits)} sub-documents.")
+
 
 # 加载.env文件中的环境变量
 dotenv.load_dotenv()
 
 # 从指定的数据库URI创建SQL数据库实例，此处使用的是SQLite数据库
 # db = SQLDatabase.from_uri("sqlite:///chinook.db")
+embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+vector_store = InMemoryVectorStore(embeddings)
+
 db = SQLDatabase.from_uri("oracle+cx_oracle://MES:mes_2024@172.17.193.237:1521/mesdev")
 print(db.dialect)
 print(db.get_context())
@@ -39,7 +55,7 @@ print(db.get_context())
 # )
 
 # # 硅基流动版
-llm = SiliconFlow(model="deepseek-ai/DeepSeek-V3", api_key=os.environ["SILICONFLOW_API_KEY"])
+llm = ChatSiliconFlow(model="deepseek-ai/DeepSeek-V3", api_key=os.environ["SILICONFLOW_API_KEY"])
 
 # 创建SQL数据库链，结合了语言模型和数据库，用于处理基于数据库的查询
 template = PromptTemplate(

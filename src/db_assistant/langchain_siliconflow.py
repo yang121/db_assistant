@@ -3,15 +3,13 @@ from langchain.llms.base import LLM
 from langchain_community.llms.utils import enforce_stop_tokens
 import requests
 import os
+from langchain_openai import OpenAIEmbeddings
 
 # 设置API密钥和基础URL环境变量
 # API_KEY = os.getenv("CUSTOM_API_KEY", "<Your Key>")
 dotenv.load_dotenv()
 
-BASE_URL = "https://api.siliconflow.cn/v1/chat/completions"
-
-
-class SiliconFlow(LLM):
+class ChatSiliconFlow(LLM):
     model: str = 'deepseek-ai/DeepSeek-V3'
     use_stream: bool = False
     max_tokens: int = 1024
@@ -21,12 +19,13 @@ class SiliconFlow(LLM):
     frequency_penalty: float = 0.5
     n: int = 1
     api_key: str
+    base_url: str = 'https://api.siliconflow.cn/v1/chat/completions'
 
     @property
     def _llm_type(self) -> str:
         return "siliconflow"
 
-    def siliconflow_completions(self, model: str, prompt: str) -> str:
+    def llm_completions(self, model: str, prompt: str) -> str:
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
@@ -45,7 +44,7 @@ class SiliconFlow(LLM):
 
         print(payload, headers)
         try:
-            response = requests.post(BASE_URL, json=payload, headers=headers)
+            response = requests.post(self.base_url, json=payload, headers=headers)
             response.raise_for_status()  # 检查响应状态码
         except requests.exceptions.HTTPError as e:
             print("HTTP 错误:", e)
@@ -59,8 +58,31 @@ class SiliconFlow(LLM):
             response = enforce_stop_tokens(response, stop)
         return response
 
+class SiliconFlowEmbeddings(OpenAIEmbeddings):
+    base_url: str = 'https://api.siliconflow.cn/v1/embeddings'
+    api_key: str = os.environ["SILICONFLOW_API_KEY"]
+    model: str = 'BAAI/bge-large-zh-v1.5'
+
+    def embeddings(self, model: str, prompt: str) -> str:
+        payload = {
+            "model": "BAAI/bge-large-zh-v1.5",
+            "input": "Silicon flow embedding online: fast, affordable, and high-quality embedding services. come try it out!",
+            "encoding_format": "float"
+        }
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.request("POST", self.base_url, json=payload, headers=headers)
+
+        print(response.text)
+
+
+
+
 if __name__ == "__main__":
-    llm = SiliconFlow(model="deepseek-ai/DeepSeek-V3", api_key=os.environ["SILICONFLOW_API_KEY"])
+    llm = ChatSiliconFlow(model="deepseek-ai/DeepSeek-V3", api_key=os.environ["SILICONFLOW_API_KEY"])
     response = llm.invoke("你好")
     print(response)
 
